@@ -1,6 +1,5 @@
 import streamlit as st
 import random
-import time
 import numpy as np
 from datetime import datetime
 import pandas as pd
@@ -13,12 +12,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for styling
+# Custom CSS for styling - simplified
 st.markdown("""
 <style>
-    .main {
-        background-color: #fff0f5;
-    }
+    .main { background-color: #fff0f5; }
     .stButton > button {
         background-color: #ff6b88;
         color: white;
@@ -55,40 +52,22 @@ st.markdown("""
         text-align: center;
         margin: 10px 0;
     }
-    .game-grid {
-        font-family: monospace;
-        font-size: 24px;
-        line-height: 1;
-        text-align: center;
+    /* Improved Snake Game UI */
+    .snake-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 30px);
+        grid-gap: 2px;
+        margin: 0 auto;
+        width: fit-content;
     }
-    .game-cell {
-        width: 40px;
-        height: 40px;
-        display: inline-block;
-        text-align: center;
-        line-height: 40px;
-        margin: 1px;
+    .snake-cell {
+        width: 30px;
+        height: 30px;
         border-radius: 4px;
-    }
-    .memory-card {
-        width: 80px;
-        height: 80px;
-        margin: 5px;
-        border-radius: 8px;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 24px;
-        cursor: pointer;
-        background-color: #ff6b88;
-        color: white;
-    }
-    .memory-grid {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: 400px;
-        margin: 0 auto;
+        font-size: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -108,13 +87,17 @@ love_messages = [
 ]
 
 # App title and header
-st.markdown("<div class='love-title'>For My Bebe  💖</div>", unsafe_allow_html=True)
+st.markdown("<div class='love-title'>For My Bebe 💖</div>", unsafe_allow_html=True)
 st.markdown("<div class='hearts'>💕 💖 💓 💗 💘 💝 💕</div>", unsafe_allow_html=True)
 
-# Initialize session state for games
+# Initialize session state
+if 'tab' not in st.session_state:
+    st.session_state.tab = "Love Messages"
+
+# Initialize game states
 if 'tic_tac_toe_board' not in st.session_state:
     st.session_state.tic_tac_toe_board = [' ' for _ in range(9)]
-    st.session_state.tic_tac_toe_turn = 'X'  # Player is X, AI is O
+    st.session_state.tic_tac_toe_turn = 'X'
     st.session_state.tic_tac_toe_winner = None
     st.session_state.tic_tac_toe_game_over = False
 
@@ -137,10 +120,15 @@ if 'memory_game' not in st.session_state:
         'flipped': [False] * 16,
         'matched': [False] * 16,
         'first_card': None,
-        'can_flip': True,
         'matches': 0,
         'moves': 0
     }
+
+if 'word_to_guess' not in st.session_state:
+    love_words = ["kisses", "cuddles", "forever", "soulmate", "darling", "treasure", "angel", "sweetheart"]
+    st.session_state.word_to_guess = random.choice(love_words)
+    st.session_state.guessed_letters = []
+    st.session_state.attempts = 5
 
 # Calculate days together
 def days_together():
@@ -150,7 +138,7 @@ def days_together():
     days = (today - anniversary).days
     return days
 
-# Tic Tac Toe logic
+# Game logic functions
 def check_winner(board):
     winning_combinations = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],  # rows
@@ -168,13 +156,11 @@ def check_winner(board):
     return None
 
 def ai_move():
-    # Simple AI for tic-tac-toe
     empty_spots = [i for i, spot in enumerate(st.session_state.tic_tac_toe_board) if spot == ' ']
     if empty_spots:
         return random.choice(empty_spots)
     return None
 
-# Snake game logic
 def move_snake():
     head_x, head_y = st.session_state.snake_game['snake'][0]
     
@@ -187,7 +173,7 @@ def move_snake():
     else:  # RIGHT
         new_head = (head_x + 1, head_y)
     
-    # Check for collision with walls
+    # Check for collision
     grid_size = st.session_state.snake_game['grid_size']
     if (new_head[0] < 0 or new_head[0] >= grid_size or 
         new_head[1] < 0 or new_head[1] >= grid_size or
@@ -209,44 +195,25 @@ def move_snake():
         st.session_state.snake_game['snake'].insert(0, new_head)
         st.session_state.snake_game['snake'].pop()
 
-# Memory game logic
-def flip_card(index):
-    # Check if card can be flipped
-    if (not st.session_state.memory_game['can_flip'] or 
-        st.session_state.memory_game['flipped'][index] or 
-        st.session_state.memory_game['matched'][index]):
-        return
-    
-    # Flip the card
-    st.session_state.memory_game['flipped'][index] = True
-    
-    # First card flipped
-    if st.session_state.memory_game['first_card'] is None:
-        st.session_state.memory_game['first_card'] = index
-    # Second card flipped
-    else:
-        first_index = st.session_state.memory_game['first_card']
-        st.session_state.memory_game['moves'] += 1
-        
-        # Check if cards match
-        if st.session_state.memory_game['cards'][first_index] == st.session_state.memory_game['cards'][index]:
-            st.session_state.memory_game['matched'][first_index] = True
-            st.session_state.memory_game['matched'][index] = True
-            st.session_state.memory_game['matches'] += 1
-            st.session_state.memory_game['first_card'] = None
-        else:
-            # Cards don't match, flip them back after a delay
-            st.session_state.memory_game['can_flip'] = False
-            time.sleep(1)  # In a real app, you'd use JavaScript for this delay
-            st.session_state.memory_game['flipped'][first_index] = False
-            st.session_state.memory_game['flipped'][index] = False
-            st.session_state.memory_game['first_card'] = None
-            st.session_state.memory_game['can_flip'] = True
+# Navigation tabs using buttons for better UX
+st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    if st.button("Love Messages"):
+        st.session_state.tab = "Love Messages"
+with col2:
+    if st.button("Mini Games"):
+        st.session_state.tab = "Mini Games"
+with col3:
+    if st.button("2D Games"):
+        st.session_state.tab = "2D Games"
+with col4:
+    if st.button("Special Moments"):
+        st.session_state.tab = "Special Moments"
+st.markdown("</div>", unsafe_allow_html=True)
 
-# Main page tabs
-tab1, tab2, tab3, tab4 = st.tabs(["Love Messages", "Mini Games", "2D Games", "Special Moments"])
-
-with tab1:
+# Content based on selected tab
+if st.session_state.tab == "Love Messages":
     st.markdown("<h2 style='text-align: center; color: #ff1493;'>Love Notes from Mubashir</h2>", unsafe_allow_html=True)
     
     # Random love message generator
@@ -263,21 +230,19 @@ with tab1:
     st.markdown(f"<div class='love-message'>We've been in love for {days_together()} wonderful days, bebe!</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
     
-    # Custom message with text box
+    # Custom message
     st.markdown("<div class='game-section'>", unsafe_allow_html=True)
     st.subheader("A Special Message For You Today 💫")
     st.markdown("<div class='love-message'>My beautiful bebe, you are the reason for my smile every day. Your love makes my life complete, and I promise to cherish you forever. - Mubashir</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-with tab2:
+elif st.session_state.tab == "Mini Games":
     st.markdown("<h2 style='text-align: center; color: #ff1493;'>Fun & Games</h2>", unsafe_allow_html=True)
     
     # Love compatibility game
     st.markdown("<div class='game-section'>", unsafe_allow_html=True)
     st.subheader("Love Compatibility Test 💘")
     if st.button("Check our compatibility"):
-        with st.spinner("Calculating our love..."):
-            time.sleep(2)
         compatibility = random.randint(95, 100)
         st.markdown(f"<div class='love-message'> Our love compatibility: {compatibility}%! Perfect match! 💯</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -300,12 +265,6 @@ with tab2:
     # Guess the word game
     st.markdown("<div class='game-section'>", unsafe_allow_html=True)
     st.subheader("Guess the Love Word 💝")
-    
-    if 'word_to_guess' not in st.session_state:
-        love_words = ["kisses", "cuddles", "forever", "soulmate", "darling", "treasure", "angel", "sweetheart"]
-        st.session_state.word_to_guess = random.choice(love_words)
-        st.session_state.guessed_letters = []
-        st.session_state.attempts = 5
     
     # Display current state of word
     display_word = ""
@@ -338,20 +297,10 @@ with tab2:
             if won:
                 st.balloons()
                 st.markdown("<div class='love-message' style='font-size: 20px;'>You won, my clever bebe! I love you! 💖</div>", unsafe_allow_html=True)
-                if st.button("Play Again"):
-                    st.session_state.word_to_guess = random.choice(love_words)
-                    st.session_state.guessed_letters = []
-                    st.session_state.attempts = 5
-                    st.experimental_rerun()
             
             # Check if lost
             if st.session_state.attempts <= 0:
                 st.markdown(f"<div class='love-message'>Game over! The word was '{st.session_state.word_to_guess}'. But you're still my winner! 💖</div>", unsafe_allow_html=True)
-                if st.button("Try Again"):
-                    st.session_state.word_to_guess = random.choice(love_words)
-                    st.session_state.guessed_letters = []
-                    st.session_state.attempts = 5
-                    st.experimental_rerun()
     
     if st.button("Reset Word Game"):
         st.session_state.word_to_guess = random.choice(love_words)
@@ -361,11 +310,11 @@ with tab2:
     
     st.markdown("</div>", unsafe_allow_html=True)
 
-with tab3:
+elif st.session_state.tab == "2D Games":
     st.markdown("<h2 style='text-align: center; color: #ff1493;'>2D Games</h2>", unsafe_allow_html=True)
     
     game_choice = st.selectbox("Choose a game to play with Naemah:", 
-                               ["Tic Tac Toe ⭕❌", "Snake Game 🐍", "Memory Match 💖"])
+                               ["Tic Tac Toe ⭕❌", "Snake Game 🐍"])
     
     if game_choice == "Tic Tac Toe ⭕❌":
         st.markdown("<div class='game-section'>", unsafe_allow_html=True)
@@ -421,53 +370,52 @@ with tab3:
         st.markdown("<div class='game-section'>", unsafe_allow_html=True)
         st.subheader("Snake Game - Collect Hearts!")
         
-        # Game controls
-        st.write("Control the snake with these buttons:")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.write("")
+        # Improved game controls - using a single row
+        cols = st.columns([1,1,1,1,1])
+        with cols[1]:
             if st.button("⬆️", key="up"):
                 if st.session_state.snake_game['direction'] != 'DOWN':
                     st.session_state.snake_game['direction'] = 'UP'
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        with cols[0]:
             if st.button("⬅️", key="left"):
                 if st.session_state.snake_game['direction'] != 'RIGHT':
                     st.session_state.snake_game['direction'] = 'LEFT'
-        with col2:
-            if st.button("⬇️", key="down"):
-                if st.session_state.snake_game['direction'] != 'UP':
-                    st.session_state.snake_game['direction'] = 'DOWN'
-        with col3:
+        with cols[2]:
             if st.button("➡️", key="right"):
                 if st.session_state.snake_game['direction'] != 'LEFT':
                     st.session_state.snake_game['direction'] = 'RIGHT'
+        with cols[1]:
+            if st.button("⬇️", key="down"):
+                if st.session_state.snake_game['direction'] != 'UP':
+                    st.session_state.snake_game['direction'] = 'DOWN'
         
         # Move snake
         if not st.session_state.snake_game['game_over']:
             move_snake()
         
-        # Display game board
+        # Display game board with improved grid
         grid_size = st.session_state.snake_game['grid_size']
-        grid = np.full((grid_size, grid_size), '⬜')
         
-        # Place food
-        food_x, food_y = st.session_state.snake_game['food']
-        grid[food_y, food_x] = '❤️'
-        
-        # Place snake
-        for i, (x, y) in enumerate(st.session_state.snake_game['snake']):
-            if i == 0:  # Head
-                grid[y, x] = '🟢'
-            else:  # Body
-                grid[y, x] = '🟩'
-        
-        # Display grid
-        st.markdown("<div class='game-grid'>", unsafe_allow_html=True)
-        for row in grid:
-            for cell in row:
-                st.markdown(f"<span class='game-cell'>{cell}</span>", unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
+        # Create CSS grid
+        st.markdown("<div class='snake-grid'>", unsafe_allow_html=True)
+        for y in range(grid_size):
+            for x in range(grid_size):
+                cell = "⬜"  # Empty cell
+                
+                # Place food
+                food_x, food_y = st.session_state.snake_game['food']
+                if (x, y) == (food_x, food_y):
+                    cell = "❤️"
+                
+                # Place snake
+                for i, (snake_x, snake_y) in enumerate(st.session_state.snake_game['snake']):
+                    if (x, y) == (snake_x, snake_y):
+                        if i == 0:  # Head
+                            cell = "🟢"
+                        else:  # Body
+                            cell = "🟩"
+                
+                st.markdown(f"<div class='snake-cell'>{cell}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
         # Display score
@@ -486,69 +434,14 @@ with tab3:
                     'grid_size': 10
                 }
                 st.experimental_rerun()
-        else:
-            # Auto-refresh for movement
-            if st.button("Move Snake"):
-                st.rerun()
         
-        st.write("Keep clicking 'Move Snake' to continue playing!")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    elif game_choice == "Memory Match 💖":
-        st.markdown("<div class='game-section'>", unsafe_allow_html=True)
-        st.subheader("Memory Match - Find Love Pairs!")
-        
-        # Display game stats
-        st.write(f"Matches: {st.session_state.memory_game['matches']}/8 | Moves: {st.session_state.memory_game['moves']}")
-        
-        # Display memory grid
-        st.markdown("<div class='memory-grid'>", unsafe_allow_html=True)
-        for i in range(16):
-            if st.session_state.memory_game['matched'][i]:
-                # Card is matched
-                st.markdown(f"""
-                <div class='memory-card' style='background-color: #4CAF50;'>
-                    {st.session_state.memory_game['cards'][i]}
-                </div>
-                """, unsafe_allow_html=True)
-            elif st.session_state.memory_game['flipped'][i]:
-                # Card is flipped
-                st.markdown(f"""
-                <div class='memory-card' style='background-color: #2196F3;'>
-                    {st.session_state.memory_game['cards'][i]}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                # Card is face down
-                if st.button("?", key=f"card_{i}"):
-                    flip_card(i)
-                    st.experimental_rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # Check for game complete
-        if st.session_state.memory_game['matches'] == 8:
-            st.success(f"Game Complete! You found all the love pairs in {st.session_state.memory_game['moves']} moves! 💕")
-            
-        # Reset button
-        if st.button("Reset Memory Game"):
-            emojis = ['❤️', '💕', '💖', '💗', '💓', '💘', '💝', '💞']
-            memory_cards = emojis + emojis
-            random.shuffle(memory_cards)
-            st.session_state.memory_game = {
-                'cards': memory_cards,
-                'flipped': [False] * 16,
-                'matched': [False] * 16,
-                'first_card': None,
-                'can_flip': True,
-                'matches': 0,
-                'moves': 0
-            }
+        # Advance game button
+        if st.button("Advance Game"):
             st.experimental_rerun()
         
         st.markdown("</div>", unsafe_allow_html=True)
 
-with tab4:
+elif st.session_state.tab == "Special Moments":
     st.markdown("<h2 style='text-align: center; color: #ff1493;'>Our Special Moments</h2>", unsafe_allow_html=True)
     
     # Favorite memories
@@ -587,4 +480,4 @@ with tab4:
 
 # Footer
 st.markdown("<div class='hearts'>💕 💖 💓 💗 💘 💝 💕</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #ff1493; margin-top: 30px;'>Made with love by Mubashir for his bebe  💖</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #ff1493; margin-top: 30px;'>Made with love by Mubashir for his bebe 💖</p>", unsafe_allow_html=True)
